@@ -7,6 +7,7 @@ interface GalleryMapProps {
   courses: GpsArtCourse[];
   selectedCourse: GpsArtCourse | null;
   onSelectCourse: (course: GpsArtCourse) => void;
+  showRouteLine?: boolean;
   showIllustrationOverlay: boolean;
   overlayOpacity: number;
   showWaypoints: boolean;
@@ -112,6 +113,7 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
   courses,
   selectedCourse,
   onSelectCourse,
+  showRouteLine = true,
   showIllustrationOverlay,
   overlayOpacity,
   showWaypoints,
@@ -178,24 +180,26 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
     group.clearLayers();
 
     // 2. Render background non-selected courses subtly so users can browse on the map
-    courses.forEach((course) => {
-      const isSelected = selectedCourse?.id === course.id;
-      if (isSelected) return;
+    if (showRouteLine) {
+      courses.forEach((course) => {
+        const isSelected = selectedCourse?.id === course.id;
+        if (isSelected) return;
 
-      const bgPoly = L.polyline(course.coordinates, {
-        color: course.accentColor,
-        weight: 3.5,
-        opacity: 0.55,
-        lineCap: 'round',
-        lineJoin: 'round',
-      }).addTo(group);
+        const bgPoly = L.polyline(course.coordinates, {
+          color: course.accentColor,
+          weight: 3.5,
+          opacity: 0.55,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(group);
 
-      bgPoly.on('click', () => onSelectCourse(course));
-      bgPoly.bindTooltip(
-        `<div style="font-weight:700;font-size:12px;">${course.title} (${course.shapeName} · ${course.distanceKm}km)</div>`,
-        { sticky: true }
-      );
-    });
+        bgPoly.on('click', () => onSelectCourse(course));
+        bgPoly.bindTooltip(
+          `<div style="font-weight:700;font-size:12px;">${course.title} (${course.shapeName} · ${course.distanceKm}km)</div>`,
+          { sticky: true }
+        );
+      });
+    }
 
     // 3. Render Selected Course with Artwork Overlay & Animation
     if (!selectedCourse) return;
@@ -214,63 +218,66 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
     if (showIllustrationOverlay) {
       // Soft artistic fill inside the GPS art shape
       L.polygon(selectedCourse.coordinates, {
+        stroke: showRouteLine,
         color: selectedCourse.accentColor,
         weight: 1.5,
-        opacity: 0.35,
+        opacity: showRouteLine ? 0.35 : 0,
         dashArray: '4 4',
         fillColor: selectedCourse.accentColor,
         fillOpacity: overlayOpacity,
       }).addTo(group);
     }
 
-    // 3b. Full route ghost baseline (visible when animation is < 100%)
-    if (animationProgress < 99.5) {
-      L.polyline(selectedCourse.coordinates, {
+    if (showRouteLine) {
+      // 3b. Full route ghost baseline (visible when animation is < 100%)
+      if (animationProgress < 99.5) {
+        L.polyline(selectedCourse.coordinates, {
+          color: selectedCourse.accentColor,
+          weight: 4,
+          opacity: 0.24,
+          dashArray: '6 8',
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(group);
+      }
+
+      // 3c. Outer neon gallery halo for active route
+      L.polyline(activeSlice, {
         color: selectedCourse.accentColor,
-        weight: 4,
-        opacity: 0.24,
-        dashArray: '6 8',
+        weight: 13,
+        opacity: 0.22,
         lineCap: 'round',
         lineJoin: 'round',
       }).addTo(group);
-    }
 
-    // 3c. Outer neon gallery halo for active route
-    L.polyline(activeSlice, {
-      color: selectedCourse.accentColor,
-      weight: 13,
-      opacity: 0.22,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(group);
+      // 3d. Main crisp GPS Art Stroke
+      L.polyline(activeSlice, {
+        color: selectedCourse.accentColor,
+        weight: 5.5,
+        opacity: 0.98,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(group);
 
-    // 3d. Main crisp GPS Art Stroke
-    L.polyline(activeSlice, {
-      color: selectedCourse.accentColor,
-      weight: 5.5,
-      opacity: 0.98,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(group);
-
-    // 3e. Direction chevron arrows along the route
-    const arrowIndices = [0.2, 0.45, 0.7, 0.9].map((ratio) =>
-      Math.floor(ratio * (denseCoords.length - 2))
-    );
-    arrowIndices.forEach((idx) => {
-      if (idx < 0 || idx >= activeCount - 1) return;
-      const p1 = denseCoords[idx];
-      const p2 = denseCoords[idx + 1];
-      const angle =
-        (Math.atan2(p2[0] - p1[0], p2[1] - p1[1]) * 180) / Math.PI;
-      const arrowIcon = L.divIcon({
-        className: 'direction-chevron',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
-        html: `<div style="transform:rotate(${-angle + 90}deg);color:#FFFFFF;background:${selectedCourse.accentColor};width:18px;height:18px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;box-shadow:0 1px 4px rgba(0,0,0,0.25);border:1.5px solid #FFF;">▲</div>`,
+      // 3e. Direction chevron arrows along the route
+      const arrowIndices = [0.2, 0.45, 0.7, 0.9].map((ratio) =>
+        Math.floor(ratio * (denseCoords.length - 2))
+      );
+      arrowIndices.forEach((idx) => {
+        if (idx < 0 || idx >= activeCount - 1) return;
+        const p1 = denseCoords[idx];
+        const p2 = denseCoords[idx + 1];
+        const angle =
+          (Math.atan2(p2[0] - p1[0], p2[1] - p1[1]) * 180) / Math.PI;
+        const arrowIcon = L.divIcon({
+          className: 'direction-chevron',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+          html: `<div style="transform:rotate(${-angle + 90}deg);color:#FFFFFF;background:${selectedCourse.accentColor};width:18px;height:18px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;box-shadow:0 1px 4px rgba(0,0,0,0.25);border:1.5px solid #FFF;">▲</div>`,
+        });
+        L.marker(p1, { icon: arrowIcon, interactive: false }).addTo(group);
       });
-      L.marker(p1, { icon: arrowIcon, interactive: false }).addTo(group);
-    });
+    }
 
     // 3f. Render Illustration Decorations (Eyes, Nose, Blush, Whiskers, Ear Tags)
     if (showIllustrationOverlay) {
@@ -282,20 +289,22 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
     }
 
     // 3g. Render Start Pin & Key Waypoints
-    const startPt = selectedCourse.coordinates[0];
-    const startIcon = L.divIcon({
-      className: 'start-pin',
-      iconSize: [68, 26],
-      iconAnchor: [34, 28],
-      html: `
-        <div style="display:flex;flex-direction:column;align-items:center;">
-          <span style="background:#18181B;color:#FFFFFF;font-size:10px;font-weight:800;padding:2px 8px;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:1.5px solid #FFFFFF;white-space:nowrap;">
-            START · 출발
-          </span>
-        </div>
-      `,
-    });
-    L.marker(startPt, { icon: startIcon }).addTo(group);
+    if (showRouteLine) {
+      const startPt = selectedCourse.coordinates[0];
+      const startIcon = L.divIcon({
+        className: 'start-pin',
+        iconSize: [68, 26],
+        iconAnchor: [34, 28],
+        html: `
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <span style="background:#18181B;color:#FFFFFF;font-size:10px;font-weight:800;padding:2px 8px;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:1.5px solid #FFFFFF;white-space:nowrap;">
+              START · 출발
+            </span>
+          </div>
+        `,
+      });
+      L.marker(startPt, { icon: startIcon }).addTo(group);
+    }
 
     if (showWaypoints) {
       selectedCourse.waypoints.forEach((wp, i) => {
@@ -354,6 +363,7 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
   }, [
     courses,
     selectedCourse,
+    showRouteLine,
     showIllustrationOverlay,
     overlayOpacity,
     showWaypoints,

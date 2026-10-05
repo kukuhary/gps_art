@@ -14,6 +14,7 @@ import {
   Navigation,
   SlidersHorizontal,
   Layers,
+  Route,
 } from 'lucide-react';
 import { INITIAL_COURSES } from './data/courses';
 import type {
@@ -53,6 +54,7 @@ export function App() {
   );
 
   // Gallery Overlay & Animation states
+  const [showRouteLine, setShowRouteLine] = useState(true);
   const [showIllustrationOverlay, setShowIllustrationOverlay] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(0.24);
   const [showWaypoints, setShowWaypoints] = useState(true);
@@ -139,6 +141,7 @@ export function App() {
   };
 
   const handleTogglePlay = () => {
+    setShowRouteLine(true);
     if (!isPlaying && animationProgress >= 99.5) {
       setAnimationProgress(2);
       setIsPlaying(true);
@@ -148,6 +151,7 @@ export function App() {
   };
 
   const handleRestartAnimation = () => {
+    setShowRouteLine(true);
     setAnimationProgress(2);
     setIsPlaying(true);
   };
@@ -433,6 +437,21 @@ export function App() {
         <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
           {/* Left: Illustration Overlay & Opacity Controls */}
           <div className="flex flex-wrap items-center gap-2 pointer-events-auto bg-white/95 backdrop-blur-md px-3 py-2 rounded-2xl shadow-md border border-zinc-200/80">
+            {/* 코스 선 (경로선) 켜기/끄기 */}
+            <button
+              onClick={() => setShowRouteLine((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                showRouteLine
+                  ? 'bg-zinc-900 text-white shadow-xs'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              }`}
+              title="지도 위의 코스 경로선(GPS 라인) 켜기/끄기"
+            >
+              <Route className={`w-3.5 h-3.5 ${showRouteLine ? 'text-violet-400' : ''}`} />
+              <span>선(경로) {showRouteLine ? 'ON' : 'OFF'}</span>
+            </button>
+
+            {/* 그림(눈·귀·실루엣) 토글 */}
             <button
               onClick={() =>
                 setShowIllustrationOverlay((prev) => !prev)
@@ -449,7 +468,7 @@ export function App() {
                 <EyeOff className="w-3.5 h-3.5" />
               )}
               <span>
-                그림(눈·귀·실루엣) 겹쳐 보기{' '}
+                그림(눈·귀·실루엣){' '}
                 {showIllustrationOverlay ? 'ON' : 'OFF'}
               </span>
             </button>
@@ -517,6 +536,7 @@ export function App() {
           courses={filteredCourses}
           selectedCourse={selectedCourse}
           onSelectCourse={handleSelectCourse}
+          showRouteLine={showRouteLine}
           showIllustrationOverlay={showIllustrationOverlay}
           overlayOpacity={overlayOpacity}
           showWaypoints={showWaypoints}
