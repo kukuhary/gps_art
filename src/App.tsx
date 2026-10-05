@@ -10,7 +10,6 @@ import {
   MapPin,
   Clock,
   Heart,
-  Plus,
   Sparkles,
   Navigation,
   SlidersHorizontal,
@@ -18,33 +17,18 @@ import {
 } from 'lucide-react';
 import { INITIAL_COURSES } from './data/courses';
 import type {
-  ArtDecoration,
   GpsArtCourse,
   RegionCategory,
   ShapeCategory,
 } from './types/course';
 import { CourseMiniPreview } from './components/CourseMiniPreview';
 import { GalleryMap } from './components/GalleryMap';
-import { CreateCoursePanel } from './components/CreateCoursePanel';
 import { downloadCourseGpx } from './utils/gpx';
 
-const STORAGE_KEY = 'trace_gallery_custom_courses_v1';
 const LIKES_STORAGE_KEY = 'trace_gallery_liked_ids_v1';
 
 export function App() {
-  // Load initial + user-saved courses from localStorage
-  const [courses, setCourses] = useState<GpsArtCourse[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as GpsArtCourse[];
-        return [...parsed, ...INITIAL_COURSES];
-      }
-    } catch {
-      // ignore storage errors
-    }
-    return INITIAL_COURSES;
-  });
+  const [courses, setCourses] = useState<GpsArtCourse[]>(INITIAL_COURSES);
 
   const [likedIds, setLikedIds] = useState<string[]>(() => {
     try {
@@ -78,17 +62,6 @@ export function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(100); // 0 to 100
   const [playbackSpeed, setPlaybackSpeed] = useState<1 | 2 | 4>(1);
-
-  // Create / Upload Studio state
-  const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
-  const [drawingDecorations, setDrawingDecorations] = useState<ArtDecoration[]>(
-    []
-  );
-  const [drawingColor, setDrawingColor] = useState('#FF5500');
-  const [activeStickerTool, setActiveStickerTool] = useState<
-    'route' | 'eye' | 'nose' | 'blush'
-  >('route');
 
   // Filter courses
   const filteredCourses = useMemo(() => {
@@ -211,77 +184,27 @@ export function App() {
     return currentWp;
   }, [selectedCourse, animationProgress]);
 
-  const handleSaveNewCourse = (newCourse: GpsArtCourse) => {
-    const updated = [newCourse, ...courses];
-    setCourses(updated);
-    const customOnly = updated.filter((c) => c.isUserCreated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(customOnly));
-
-    setIsDrawingMode(false);
-    setDrawingPoints([]);
-    setDrawingDecorations([]);
-    setSelectedCourseId(newCourse.id);
-    setAnimationProgress(100);
-  };
-
   return (
     <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-zinc-50 text-zinc-900">
       {/* LEFT PANEL: Minimal Gallery Search & Course Archive */}
       <aside className="w-full lg:w-[440px] xl:w-[470px] h-[48vh] lg:h-full flex-shrink-0 border-b lg:border-b-0 lg:border-r border-zinc-200 bg-white flex flex-col z-20 shadow-xs">
-        {isDrawingMode ? (
-          <CreateCoursePanel
-            drawingPoints={drawingPoints}
-            drawingDecorations={drawingDecorations}
-            drawingColor={drawingColor}
-            activeStickerTool={activeStickerTool}
-            onChangeColor={setDrawingColor}
-            onChangeStickerTool={setActiveStickerTool}
-            onUndoPoint={() =>
-              setDrawingPoints((prev) => prev.slice(0, prev.length - 1))
-            }
-            onClearDrawing={() => {
-              setDrawingPoints([]);
-              setDrawingDecorations([]);
-            }}
-            onImportGpxPoints={(pts) => setDrawingPoints(pts)}
-            onSaveCourse={handleSaveNewCourse}
-            onCancel={() => {
-              setIsDrawingMode(false);
-              setDrawingPoints([]);
-              setDrawingDecorations([]);
-            }}
-          />
-        ) : (
-          <>
-            {/* Top Brand & Upload Bar */}
-            <header className="px-5 pt-4 pb-3.5 border-b border-zinc-100 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
-                  <h1 className="font-black text-base tracking-tight text-zinc-950">
-                    TRACE GALLERY
-                  </h1>
-                  <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600">
-                    KR ARCHIVE
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  흑백 도시 지도 위에 그리는 대한민국 GPS 아트 컬렉션
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  setIsDrawingMode(true);
-                  setDrawingPoints([]);
-                  setDrawingDecorations([]);
-                }}
-                className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>코스 등록</span>
-              </button>
-            </header>
+        {/* Top Brand */}
+        <header className="px-5 pt-4 pb-3.5 border-b border-zinc-100 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
+              <h1 className="font-black text-base tracking-tight text-zinc-950">
+                TRACE GALLERY
+              </h1>
+              <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600">
+                KR ARCHIVE
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              흑백 도시 지도 위에 그리는 대한민국 GPS 아트 컬렉션
+            </p>
+          </div>
+        </header>
 
             {/* Search & Multi-Filter Controls */}
             <div className="px-5 py-3.5 border-b border-zinc-100 space-y-3 bg-zinc-50/50">
@@ -502,8 +425,6 @@ export function App() {
                 })
               )}
             </div>
-          </>
-        )}
       </aside>
 
       {/* RIGHT PANEL: Interactive Monochrome Map + Artwork Overlay & Animation Player */}
@@ -602,21 +523,10 @@ export function App() {
           animationProgress={animationProgress}
           isPlaying={isPlaying}
           mapStyle={mapStyle}
-          isDrawingMode={isDrawingMode}
-          drawingPoints={drawingPoints}
-          drawingDecorations={drawingDecorations}
-          drawingColor={drawingColor}
-          activeStickerTool={activeStickerTool}
-          onAddDrawingPoint={(pt) =>
-            setDrawingPoints((prev) => [...prev, pt])
-          }
-          onAddDrawingDecoration={(dec) =>
-            setDrawingDecorations((prev) => [...prev, dec])
-          }
         />
 
         {/* Bottom Floating Selected Course Detail & Start->Finish Animation Dock */}
-        {selectedCourse && !isDrawingMode && (
+        {selectedCourse && (
           <div className="absolute bottom-5 left-4 right-4 md:left-6 md:right-14 z-10 pointer-events-none flex justify-center">
             <div className="pointer-events-auto w-full max-w-3xl bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-zinc-200/90 p-4 md:p-5 space-y-3.5">
               {/* Top Row: Course Title, Station Info & GPX Download */}

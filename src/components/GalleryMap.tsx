@@ -13,14 +13,6 @@ interface GalleryMapProps {
   animationProgress: number; // 0 to 100
   isPlaying: boolean;
   mapStyle: 'light' | 'dark' | 'color';
-  // Drawing mode props
-  isDrawingMode: boolean;
-  drawingPoints: [number, number][];
-  drawingDecorations: ArtDecoration[];
-  drawingColor: string;
-  activeStickerTool: 'route' | 'eye' | 'nose' | 'blush';
-  onAddDrawingPoint: (latlng: [number, number]) => void;
-  onAddDrawingDecoration: (dec: ArtDecoration) => void;
 }
 
 function createDecorationIcon(dec: ArtDecoration, accentColor: string): L.DivIcon {
@@ -126,13 +118,6 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
   animationProgress,
   isPlaying,
   mapStyle,
-  isDrawingMode,
-  drawingPoints,
-  drawingDecorations,
-  drawingColor,
-  activeStickerTool,
-  onAddDrawingPoint,
-  onAddDrawingDecoration,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -168,44 +153,10 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
     };
   }, []);
 
-  // Handle map clicks during Drawing Mode
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      if (!isDrawingMode) return;
-      const pos: [number, number] = [
-        Number(e.latlng.lat.toFixed(5)),
-        Number(e.latlng.lng.toFixed(5)),
-      ];
-      if (activeStickerTool === 'route') {
-        onAddDrawingPoint(pos);
-      } else {
-        onAddDrawingDecoration({
-          id: `dec-${Date.now()}`,
-          type: activeStickerTool,
-          position: pos,
-          scale: 1.05,
-        });
-      }
-    };
-
-    map.on('click', handleClick);
-    return () => {
-      map.off('click', handleClick);
-    };
-  }, [
-    isDrawingMode,
-    activeStickerTool,
-    onAddDrawingPoint,
-    onAddDrawingDecoration,
-  ]);
-
   // Fly to selected course when selection changes
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !selectedCourse || isDrawingMode) return;
+    if (!map || !selectedCourse) return;
 
     if (lastSelectedCourseIdRef.current !== selectedCourse.id) {
       lastSelectedCourseIdRef.current = selectedCourse.id;
@@ -216,7 +167,7 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
         duration: 0.85,
       });
     }
-  }, [selectedCourse, isDrawingMode]);
+  }, [selectedCourse]);
 
   // Render courses, overlays, animations, and drawing paths
   useEffect(() => {
@@ -225,49 +176,6 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
     if (!map || !group) return;
 
     group.clearLayers();
-
-    // 1. If in Drawing Mode, render user's active sketch
-    if (isDrawingMode) {
-      if (drawingPoints.length >= 3 && showIllustrationOverlay) {
-        L.polygon(drawingPoints, {
-          color: 'transparent',
-          fillColor: drawingColor,
-          fillOpacity: overlayOpacity * 0.35,
-        }).addTo(group);
-      }
-
-      if (drawingPoints.length >= 2) {
-        L.polyline(drawingPoints, {
-          color: drawingColor,
-          weight: 6,
-          opacity: 0.92,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(group);
-      }
-
-      drawingPoints.forEach((pt, idx) => {
-        L.circleMarker(pt, {
-          radius: idx === 0 ? 7 : 4.5,
-          color: '#FFFFFF',
-          weight: 2,
-          fillColor: idx === 0 ? '#18181B' : drawingColor,
-          fillOpacity: 1,
-        })
-          .bindTooltip(idx === 0 ? '출발점' : `#${idx + 1}`, {
-            direction: 'top',
-          })
-          .addTo(group);
-      });
-
-      drawingDecorations.forEach((dec) => {
-        L.marker(dec.position, {
-          icon: createDecorationIcon(dec, drawingColor),
-        }).addTo(group);
-      });
-
-      return;
-    }
 
     // 2. Render background non-selected courses subtly so users can browse on the map
     courses.forEach((course) => {
@@ -451,10 +359,6 @@ export const GalleryMap: React.FC<GalleryMapProps> = ({
     showWaypoints,
     animationProgress,
     isPlaying,
-    isDrawingMode,
-    drawingPoints,
-    drawingDecorations,
-    drawingColor,
     onSelectCourse,
   ]);
 
